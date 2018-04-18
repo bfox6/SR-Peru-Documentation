@@ -1,0 +1,147 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{minted}
+\usepackage{listings}
+\usepackage{hyperref}
+
+\title{SR Peru}
+\author{ Brett Fox }
+\date{April 2018}
+
+\begin{document}
+
+\maketitle
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{Adding A New Model}
+We have split the models out so each section of the page (Participant, Entomology, FSS\_FLU) has its own \textit{.py} file.  Each model is then being imported into the \textit{form\_manager/models/\_\_init\_\_.py} file so that in any other file when you want to import a model you can do so with:
+\begin{minted}{python}
+from form_manager.models import model_name
+\end{minted}
+
+\section{Adding A New Form}
+The form definitions reside in \textit{form\_manager/forms/} and are split into individual files for each page section (Participant, Entomology, FSS\_FLU). 
+\\\\We are taking advantage of Django's built in \textit{ModelForm} class to define forms. This class requires you to have a model already created for the form you are implementing.
+\\\\Any custom form validation is being handled in these form classes via the \textit{clean()} method.
+\\\\The order of the fields displayed on the front end is being assigned in the \textit{get\_context\_data()} method in whichever Create/Update view is handling the current form.  They are being handled in the context variable \textit{field\_rows}.  For example:
+\begin{minted}{python}
+context['field_rows'] = [
+    [form['family']],
+    [form['first_name'], form['last_name'], form['last_name2']],
+    [form['sex'], form['birthdate']],
+    [form['neighborhood_years'], form['neighborhood_months']],
+    [form['house_years'], form['house_months']],
+    [form['history']],
+    [form['fs_age'], form['fs_address'], form['fs_weight']],
+    [form['review']],
+    [form['comments']],
+]
+\end{minted}
+
+\section{Adding a New List View}
+List tables on the site are using a Jquery plugin called DataTables.  DataTables expects a dictionary object that it can manipulate on the front end which causes problems with extremely large data sets like those which we are working with. To solve this, we are handling all of the sorting, searching, and pagination ourselves by taking advantage of DataTable's ability to allow server side processing.
+\\\\The DataTable is empty to begin with and a request is being sent via AJAX that passes the table parameters (search values, page number, sorted column, etc.) to a function that uses this information to gather a dictionary of items the table should display.
+\\\\In order for our DataTables function to work correctly we must create an entry in our global variable dictionary located in \textit{form\_manager/global\_variables.py}.  This global variables dictionary allows for code to be dynamic.  It is used throughout our code but it is critical to add any new form you want displayed in a list or detail page to the dictionary.  Below is an example of a global variable entry:
+\begin{minted}{javascript}
+'participant': {
+        'model': ParticipantForm,
+        'active': 'participant_detail',
+        'form_class': ParticipantFormForm,
+        'breadcrumb_name': 'Participant Detail',
+        'searches': {
+            'ID': ['id'],
+            'First Name': ['first_name'],
+            'Last Name': ['last_name'],
+            'Last Name2': ['last_name2'],
+            'Birthdate': ['birthdate'],
+            'Family': ['family'],
+            'Neighborhood Years': ['neighborhood_years'],
+            'Neighborhood Months': ['neighborhood_months'],
+            'House Years': ['house_years'],
+            'House Months': ['house_months'],
+            'History': ['history'],
+            'FS Age': ['fs_age'],
+            'FS adminAddress': ['fs_address'],
+            'Review': ['review'],
+            'Comments': ['comments'],
+            'FS Weight': ['fs_weight'],
+            'Sex': ['sex__option'],
+            'Census ID': ['census_id__id'],
+            'Entered By': ['entered_by__username'],
+            'Entered Date': ['entered_date'],
+            'Updated Date': ['updated_date'],
+            'Updated By': ['updated_by__username'],
+            'Participant Codes': ['participant_participantCode__participant_code'],
+            'Studies': ['participant_consent__study__study'],
+            'Age': None
+        },
+        'many_to_many_fields': {
+            'Participant Codes': 'participant_participantCode__participant_code',
+            'census_id': 'census_id__id',
+            'Studies': 'participant_consent__study__study'
+        },
+        'order': [
+            'id', 'Participant Codes', 'census_id', 'Studies', 'family', 'first_name', 
+            'last_name', 'last_name2', 'sex', 'birthdate', 'Age', 'neighborhood_years', 
+            'neighborhood_months', 'house_years', 'house_months', 'comments', 
+            'history', 'fs_age', 'fs_weight', 'fs_address', 'review', 'entered_by', 
+            'entered_date', 'updated_by', 'updated_date'
+        ],
+        'incomplete_searchable_fields': ['Participant Codes', 'First Name', 
+        'Last Name', 'Last Name2', 'Entered By', 'Updated By']
+    },
+\end{minted}
+The most important fields for this feature are outlined below:
+
+\textbf{searches}: Any fields you are allowing to be searched must be added to this dictionary. The key must be the fields as displayed on the front end after titling has been applied. The value must be a list of the actual model fields used to search the field when using the Django ORM. That value will be literally placed into a query string when used. It is a list because there are instances where multiple fields must be queried.
+
+\textbf{many\_to\_many\_fields}: manytomany type fields are handled differently than other field types so their search fields are defined in a separate dictionary. The key must be in the format it is given in the model unless it is a field not contained in the model. In that case the value must be the actual model field used to search the field when using the Django ORM.
+
+\textbf{order}: This list will be used to distinguish the field order of both the list and detail pages.  Each field must be in the format it is given in the model.  The exception to this are fields added that don't exist within the model. Those must be fields as displayed on the front end after titling has been applied.
+
+\section{Adding a New Model Field}
+When adding a new field to an existing form model then you would need to refer to sections 1-3 to get the field to display correctly on the website.
+
+\section{Adding Field Options}
+When adding a new field option there are multiple avenues to take.  If adding an individual or small number of options I would add the option to the appropriate fixture file (see section Fixtures) in the fixtures folder. If adding a large number of options I would add the options through the admin panel and dump the fixtures and add them to the appropriate file (see section Fixtures).
+
+\section{Fixtures}
+We have created a custom management script that will load all of the necessary fixture files:
+\begin{lstlisting}[language=bash]
+  python manage.py load_fixtures
+\end{lstlisting}
+The fixture files are defined below:
+
+\textbf{auth\_group.json}: Handles definitions of auth\_group tables, mainly to define which tables will appear editable for Admins.
+
+\textbf{auth\_users.json}: Handles definitions of auth\_user tables. These are people that may log into the site and their permissions.
+
+\textbf{options.json}: Handles definitions of any 'Option' tables.  'Option' tables include those tables that only hold drop-down option choices. e.g. YesNoOption, ResidentialOption, ComplaintOption.
+
+\textbf{r\_tables.json}: Handles definitions of 'Reference' tables.  Reference tables are drop-down choices but also hold more critical information.  e.g. Personnel, Project, Study.
+
+\section{Adding/Updating Translations}
+Translations are handled in \textit{locale/es/LC\_MESSAGES/django.po} for English to Spanish and \textit{locale/en/LC\_MESSAGES/django.po} for Spanish to English. 
+\\\\After adding/Updating the translation in the English to Spanish \textit{django.po} file and run the following command for the changes to take effect:
+\begin{lstlisting}[language=bash]
+  python manage.py compilemessages
+\end{lstlisting}
+We have also included a script that updates the Spanish to English \textit{django.po} file automatically:
+\begin{lstlisting}[language=bash]
+  python manage.py make_english_po
+\end{lstlisting}
+
+\section{Dropdown Sorting}
+Most dropdown options on the website are being ordered alphabetically but this is quite difficult to do on the backend while dealing with translations so we are sorting them via javascript in the file \textit{static/js/sort\_dropdown.js}.
+\\\\Any dropdown options you don't want to sort alphabetically on the front end must be added to the 'dropdowns\_to\_ignore' list in the same JS file.
+
+\section{Resources}
+\textbf{Datatables:} \url{https://datatables.net/manual/}
+\\\textbf{Datatables Server Side Processing:} \url{https://datatables.net/manual/server-side}
+\\\textbf{Django Translation:} \url{https://docs.djangoproject.com/en/2.0/topics/i18n/translation/}
+\\\textbf{Bootstrap Select (Dropdowns):} \url{https://silviomoreto.github.io/bootstrap-select/}
+
+\end{document}
