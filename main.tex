@@ -6,7 +6,7 @@
 
 \title{ SR Peru Code Documentation}
 \author{ Brett Fox and Jared Olson }
-\date{ April 2018 }
+\date{ May 2018 }
 
 \begin{document}
 
@@ -34,12 +34,11 @@ from form_manager.models import model_name
 
 \subsection{UUID Primary Key and Many-To-Many Tables}
 \subsubsection{UUID Primary Key}
-To prevent collisions of primary keys when the UC Davis server syncs with the two servers in Peru we are changing the primary key of each form model from the auto-incremented integer that Django provides to a UUID field. This involves defining the id field manually in the model like so:
+To prevent collisions of primary keys when the UC Davis server syncs with the two servers in Peru we are changing the primary key of each model from the auto-incremented integer that Django provides to a UUID field. This involves defining the id field manually in the model like so:
 \begin{minted}{python}
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, 
     editable=False)
 \end{minted}
-This is only necessary for models that could be consistently updated on both servers. Option models or r\_table models don't require UUID fields because they should remain static for the most part.
 \subsubsection{Many-To-Many Tables}
 Normally, for many-to-many relationships Django will automatically create and manage an intermediate table. However, it does allow users the ability to manually manage an intermediate table. We manually define all many-to-many intermediate tables so we can change the ID field to a UUID field. Information regarding this process can be found in the resources section.
 \\We have a custom function for saving many-to-many relationships in views. It is located in \textit{form\_manager/helpers/save\_custom\_m2m()}. This function requires that the form which contains the many-to-many relationship you are trying to save has an a proper entry in the \textit{global\_variables.py} file like so:
