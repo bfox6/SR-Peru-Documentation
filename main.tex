@@ -3,10 +3,12 @@
 \usepackage{minted}
 \usepackage{listings}
 \usepackage{hyperref}
+\usepackage{graphicx}
+\graphicspath{ {screenshots/} }
 
 \title{ SR Peru Code Documentation}
 \author{ Brett Fox and Jared Olson }
-\date{ May 2018 }
+\date{ July 2018 }
 
 \begin{document}
 
@@ -97,8 +99,9 @@ The advantage of this is that we can pass a dictionary of the 10-100 items neede
         'active': 'participant_detail',
         'form_class': ParticipantFormForm,
         'breadcrumb_name': 'Participant Detail',
+        'id_title': 'Participant ID',
         'searches': {
-            'ID': ['id'],
+            'Participant ID': ['id'],
             'First Name': ['first_name'],
             'Last Name': ['last_name'],
             'Last Name2': ['last_name2'],
@@ -115,7 +118,7 @@ The advantage of this is that we can pass a dictionary of the 10-100 items neede
             'Comments': ['comments'],
             'FS Weight': ['fs_weight'],
             'Sex': ['sex__option'],
-            'Census ID': ['census_id__id'],
+            'Censuses': ['census_id__project__project_code', 'census_id__location__location_code', 'census_id__id'],
             'Entered By': ['entered_by__username'],
             'Entered Date': ['entered_date'],
             'Updated Date': ['updated_date'],
@@ -130,15 +133,13 @@ The advantage of this is that we can pass a dictionary of the 10-100 items neede
             'Studies': 'participant_consent__study__study'
         },
         'order': [
-            'id', 'Participant Codes', 'census_id', 'Studies', 'family', 
-            'first_name', 'last_name', 'last_name2', 'sex', 'birthdate', 
-            'Age', 'neighborhood_years', 'neighborhood_months', 
-            'house_years', 'house_months', 'comments', 'history', 
-            'fs_age', 'fs_weight', 'fs_address', 'review', 'entered_by', 
-            'entered_date', 'updated_by', 'updated_date'
+            'id', 'Participant Codes', 'census_id', 'Studies', 'family', 'first_name', 'last_name', 'last_name2',
+            'sex', 'birthdate', 'Age', 'neighborhood_years', 'neighborhood_months', 'house_years', 'house_months',
+            'comments', 'history', 'fs_age', 'fs_weight', 'fs_address', 'review', 'entered_by', 'entered_date',
+            'updated_by', 'updated_date',
         ],
-        'incomplete_searchable_fields': ['Participant Codes', 'First Name', 
-        'Last Name', 'Last Name2', 'Entered By', 'Updated By'],
+        'incomplete_searchable_fields': ['Participant ID', 'Censuses', 'Participant Codes', 'First Name', 'Last Name',
+                                         'Last Name2', 'Entered By', 'Updated By'],
         'many-to-many_definitions': [
             {
                 'model': ParticipantFormCensusForm,
@@ -147,7 +148,7 @@ The advantage of this is that we can pass a dictionary of the 10-100 items neede
                 'field_name_2': 'census_form',
             },
         ]
-    },
+    }
 \end{minted}
 The most important fields for this feature are outlined below:
 
@@ -161,8 +162,9 @@ The most important fields for this feature are outlined below:
 When adding a new field to an existing form model then you would need to refer to sections 1-3 to get the field to display correctly on the website.
 
 \section{Adding Field Options}
-When adding a new field option there are multiple avenues to take.  If adding an individual or small number of option, add the option to the appropriate fixture file (see section Fixtures) in the fixtures folder. If adding a large number of options, add the options through the admin panel and dump the fixtures and add them to the appropriate file (see Fixtures section).
-
+Only users with the permission, '\textit{Reference Table Admin}, are able to add new drop-down options and Reference table entries.  They will do so by accessing the Admin page.  The Admin page has been filtered to show only tables they can edit. For example, form tables are not available for them to edit in the Admin page. The Admin page is grouped by model type (Reference Table, Participant, Entomology, FSS-Flu, Shared Tables). The forms that use the Option model are also listed. 
+\\
+\includegraphics[width=\textwidth,height=\textheight,keepaspectratio]{/admin_screenshot}
 \section{Fixtures}
 There is a custom management script that will load all of the necessary fixture files:
 \begin{lstlisting}[language=bash]
@@ -170,7 +172,7 @@ There is a custom management script that will load all of the necessary fixture 
 \end{lstlisting}
 The fixture files are defined below:
 
-\textbf{auth\_group.json}: Handles definitions of auth\_group tables, mainly to define which tables will appear editable for Admins.
+\textbf{auth\_group.json}: Handles definitions of auth\_group tables, mainly to define which tables will appear editable for Reference Table Admins.
 
 \textbf{auth\_users.json}: Handles definitions of auth\_user tables. These are people that may log into the site and their permissions.
 
@@ -198,8 +200,10 @@ Then run the following script which updates the Spanish to English \textit{djang
 Most dropdown options on the website are being ordered alphabetically. But this is quite difficult to do on the backend when dealing with translations, so we are sorting them via JavaScript in the file \textit{static/js/sort\_dropdown.js}.
 \\\\Any dropdown options you don't want to sort alphabetically on the front end must be added to the 'dropdowns\_to\_ignore' list in the same JavaScript file.
 
-\section{Admin Templates}
-Admin templates exist in the path \textit{form\_manager/templates/admin/} so they can be overwritten. Currently, we are only overwriting them by including a new JavaScript which will change the form widgets for 'Location' fields on the admin page. It is important not to change the structure of the files or remove these templates.
+\section{Admin Customization}
+Admin templates exist in the path \textit{form\_manager/templates/admin/} so they can be overwritten.  It is important not to change the structure of the files or remove these templates. We are overwriting form\_manager templates to include a new JavaScript file which will change the form widgets for 'Location' fields on the admin page. The \textit{base.html} and \textit{index.html} are being overwritten to customize table grouping on the main admin page.
+\\\\
+The \textit{AdminSite} class is being instantiated so we can add data to pass to the \textit{index.html} template.  This is how we are customizing the main Admin page. This is happening in \textit{form\_manager/admin.py}. Inside this class, \textit{MyAdminSite}, we are accessing a global variables file that defines what tables should be grouped where. This is defined in \textit{form\_manager/admin\_global\_variables.py}.
 
 \section{ETL Script}
 The ETL is split into two different scripts.
